@@ -130,6 +130,53 @@ func ReplaceContent(content []byte, replacements map[string]string) []byte {
 	return content
 }
 
+// IsExcluded reports whether relPath (a slash-separated path relative to the
+// vault root) matches any of the Obsidian userIgnoreFilters patterns.
+// Supported patterns:
+//   - Plain paths: "Archive", "Templates/" — prefix match
+//   - Globs: "*.pdf" — matches against each path segment
+//   - Double-star: "**/drafts" — matches at any depth
+func IsExcluded(relPath string, filters []string) bool {
+	normalized := filepath.ToSlash(relPath)
+	for _, filter := range filters {
+		if matchFilter(normalized, filter) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchFilter(normalizedPath, filter string) bool {
+	filter = strings.TrimRight(filter, "/")
+
+	// Plain path: prefix match
+	if !strings.ContainsAny(filter, "*?[") {
+		return normalizedPath == filter || strings.HasPrefix(normalizedPath, filter+"/")
+	}
+
+	// "**/" prefix: match the remainder against all subpaths and segments
+	if strings.HasPrefix(filter, "**/") {
+		return matchPathOrSegments(normalizedPath, filter[3:])
+	}
+
+	// Simple glob (e.g. "*.pdf"): match against full path and each segment
+	return matchPathOrSegments(normalizedPath, filter)
+}
+
+// matchPathOrSegments tries filepath.Match against the full path and each
+// individual path segment, so "*.pdf" matches "sub/file.pdf" via the segment.
+func matchPathOrSegments(path, pattern string) bool {
+	if matched, _ := filepath.Match(pattern, path); matched {
+		return true
+	}
+	for _, segment := range strings.Split(path, "/") {
+		if matched, _ := filepath.Match(pattern, segment); matched {
+			return true
+		}
+	}
+	return false
+}
+
 func ShouldSkipDirectoryOrFile(info os.FileInfo) bool {
 	isDirectory := info.IsDir()
 	isHidden := info.Name()[0] == '.'

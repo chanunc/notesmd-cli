@@ -166,6 +166,45 @@ func TestReplaceContent(t *testing.T) {
 
 }
 
+func TestIsExcluded(t *testing.T) {
+	tests := []struct {
+		name    string
+		relPath string
+		filters []string
+		want    bool
+	}{
+		// Plain path prefix matching
+		{"empty filters", "Archive/note.md", []string{}, false},
+		{"nil filters", "Archive/note.md", nil, false},
+		{"exact folder match", "Archive", []string{"Archive"}, true},
+		{"file inside excluded folder", "Archive/note.md", []string{"Archive"}, true},
+		{"nested file inside excluded folder", "Archive/2024/note.md", []string{"Archive"}, true},
+		{"filter with trailing slash", "Templates/daily.md", []string{"Templates/"}, true},
+		{"no match", "Notes/note.md", []string{"Archive", "Templates"}, false},
+		{"partial folder name does not match", "Archives/note.md", []string{"Archive"}, false},
+		{"exact file match", "Private/secret.md", []string{"Private/secret.md"}, true},
+		{"multiple filters, one matches", "Templates/t.md", []string{"Archive", "Templates"}, true},
+		// Glob patterns
+		{"glob *.pdf matches file at root", "report.pdf", []string{"*.pdf"}, true},
+		{"glob *.pdf matches file in subfolder", "docs/report.pdf", []string{"*.pdf"}, true},
+		{"glob *.pdf does not match .md", "note.md", []string{"*.pdf"}, false},
+		{"glob *.pdf matches deeply nested", "a/b/c/file.pdf", []string{"*.pdf"}, true},
+		// Double-star patterns
+		{"**/drafts matches folder at root", "drafts", []string{"**/drafts"}, true},
+		{"**/drafts matches nested folder", "a/b/drafts", []string{"**/drafts"}, true},
+		{"**/drafts matches file inside", "a/drafts/note.md", []string{"**/drafts"}, true},
+		{"**/*.pdf matches nested pdf", "docs/file.pdf", []string{"**/*.pdf"}, true},
+		{"**/drafts does not match partial", "mydrafts", []string{"**/drafts"}, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := obsidian.IsExcluded(tt.relPath, tt.filters)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestShouldSkipDirectoryOrFile(t *testing.T) {
 	tests := []struct {
 		testName string
