@@ -100,6 +100,11 @@ If you're running on a headless server or don't have Obsidian installed (e.g., s
    ```
    You can then use `notesmd-cli set-default "personal"` or pass `--vault "work"` to target a specific vault.
 
+> **macOS note:** On macOS, the CLI reads the config from `~/Library/Application Support/obsidian/` rather than `~/.config/obsidian/`, even when Obsidian is not installed. If you get a `User config directory not found` error after creating `~/.config/obsidian/obsidian.json`, create a symlink so both paths resolve to the same file:
+> ```bash
+> ln -s ~/.config/obsidian ~/Library/Application\ Support/obsidian
+> ```
+
 ---
 
 ## Migrating from Obsidian CLI
